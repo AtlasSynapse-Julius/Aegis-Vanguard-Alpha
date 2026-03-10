@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: aegis
+      POSTGRES_DB: aegis
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    # Pass API keys from host .env (same dir as docker-compose.yml) so the scanner can use Gemini/Claude
+    environment:
+      DATABASE_URL: postgresql://aegis:aegis@postgres:5432/aegis
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-aegis-admin-2026}
+      JWT_SECRET: ${JWT_SECRET:-aegis-jwt-secret-change-me-in-production}
+      PORT: 4000
+      NODE_ENV: production
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_PROXY_TARGET: http://backend:4000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data: {}

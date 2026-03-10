@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/components/layout.tsx","./src/components/navlink.tsx","./src/pages/dashboard.tsx","./src/pages/newscan.tsx","./src/pages/scandetail.tsx"],"version":"5.6.3"}

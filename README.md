@@ -6,6 +6,77 @@
     <h1 align="center">The LLM Red Teaming Framework</h1>
 </p>
 
+---
+
+## Aegis Vanguard (Commercial Web Product)
+
+**Aegis Vanguard** is a full-stack commercial application built on DeepTeam by **Atlas Synapse**. It provides a web UI and REST API to run LLM red-team scans against target URLs, store results in PostgreSQL, and download PDF reports.
+
+### Quick start with Docker
+
+1. **Clone and configure**
+   ```bash
+   cp .env.example .env
+   # Edit .env and set GEMINI_API_KEY (required for DeepTeam scan simulation/evaluation).
+   ```
+
+2. **Run with Docker Compose**
+   ```bash
+   docker compose up --build
+   ```
+   - **PostgreSQL**: `localhost:5432` (user `aegis`, password `aegis`, db `aegis`)
+   - **API**: http://localhost:4000 (health: http://localhost:4000/health)
+   - **Frontend**: http://localhost:3000 (Vite dev server; proxies `/api` to the backend)
+
+3. **Use the app**
+   - Open http://localhost:3000
+   - **Dashboard**: view total scans, average risk score, critical findings count, recent scans
+   - **New Scan**: enter a target URL (e.g. `https://your-llm-api.com`). The scanner POSTs to `{url}/chat` with `{ "input": "<prompt>", "turns": [...] }` and expects `{ "content": "<assistant reply>" }`. Click **Launch Scan**, then open the scan detail for live status.
+   - **Scan Detail**: vulnerabilities by severity, risk score gauge, **Download PDF Report**
+
+### Local development (without Docker)
+
+1. **PostgreSQL** — Create a database and set `DATABASE_URL` in `.env` (see `.env.example`).
+2. **Backend**: `cd server && npm ci && npm run build && npm run dev` (Node 18+, default port 4000).
+3. **Python / DeepTeam**: From project root run `pip install -e .` (or `poetry install`) and `pip install -r scanner/requirements.txt`. Set `GEMINI_API_KEY`.
+4. **Frontend**: `cd client && npm ci && npm run dev` — open http://localhost:3000 (proxy to API).
+
+### Environment variables (.env)
+
+| Variable        | Description |
+|----------------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `GEMINI_API_KEY` | Gemini API key for DeepTeam (simulator & evaluation). Optional if using static-only scans. |
+| `USE_STATIC_ATTACKS` | Set to `1` to skip Gemini and use built-in static attack prompts only (no quota needed). |
+| `PORT`         | API server port (default 4000) |
+
+### API endpoints
+
+- `POST /api/scans` — create scan (body: `{ "target_url": "https://...", "notes": "optional" }`).
+- `GET /api/scans` — list scans.
+- `GET /api/scans/:id` — scan details and vulnerabilities.
+- `GET /api/scans/:id/report` — download PDF report.
+
+### Project layout (Aegis Vanguard)
+
+- `server/` — Express + TypeScript backend (API, PostgreSQL, PDF).
+- `client/` — React + Vite + Tailwind frontend (dark theme).
+- `scanner/` — Python script running DeepTeam against a target URL; outputs JSON to stdout.
+- `deepteam/` — DeepTeam library (unchanged).
+
+### Troubleshooting scans (Aegis Vanguard)
+
+- **Automatic fallback** — If Gemini fails (quota, network, or key), the scanner automatically reruns with static attack prompts and rule-based scoring, so you still get findings (e.g. PII or prompt leakage) without any API. Set `USE_STATIC_ATTACKS=1` to always use static-only mode.
+- **"Error simulating adversarial attacks: RetryError / ClientError"** — The scanner uses **Gemini** inside the backend container to generate attack prompts. Failures usually mean:
+  1. **Quota / rate limit** — The free tier has low limits. Wait a few minutes or use a Gemini API key with higher quota ([Google AI Studio](https://aistudio.google.com/apikey)).
+  2. **Network** — The backend container must be able to reach `https://generativelanguage.googleapis.com`. If you're behind a proxy or firewall, configure it for the container.
+  3. **Key** — Ensure `GEMINI_API_KEY` is set in `.env` and that the backend is started with that env (e.g. `docker compose up` loads `.env` automatically).
+- **Target uses no API** — For demos, use a rule-based target (e.g. a small Flask app that returns fixed or pattern-based responses) so only the scanner uses Gemini and you avoid double usage.
+
+**LICENSE.md** remains Apache 2.0. **NOTICE** credits DeepTeam/Confident AI. All new Aegis Vanguard code is © Atlas Synapse.
+
+---
+
 <h4 align="center">
     <p>
         <a href="https://www.trydeepteam.com?utm_source=GitHub">Documentation</a> |

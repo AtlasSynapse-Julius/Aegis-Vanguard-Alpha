@@ -1,0 +1,7 @@
+# Scanner dependencies (used when running scan_runner.py and crawler.py).
+# DeepTeam is installed from the project root (pip/poetry install).
+requests>=2.31.0
+google-generativeai>=0.8.0
+anthropic>=0.40.0
+crawl4ai>=0.4.0
+beautifulsoup4>=4.12.0
